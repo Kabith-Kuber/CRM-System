@@ -81,11 +81,59 @@ function FailureScanner({ setLifecycle, setView, notify }: any) {
 }
 
 function Onboarding({ notify }: any) {
-  const [step, setStep] = useState(0); const [connected, setConnected] = useState<string[]>([]); const [detecting, setDetecting] = useState(false);
+  const [step, setStep] = useState(-1);
+  const [connected, setConnected] = useState<string[]>([]);
+  const [running, setRunning] = useState(false);
+  const phases = [
+    { name:"Connect", detail:"Identify the customer stack" },
+    { name:"Normalize", detail:"Map messages, tools, and traces" },
+    { name:"Configure", detail:"Create reliability signals" },
+    { name:"Launch", detail:"Publish the first dashboard" }
+  ];
   const connectors = ["OpenAI", "Anthropic", "LangGraph", "LangSmith", "Custom JSON", "S3 export"];
-  const detect = () => { setDetecting(true); window.setTimeout(() => { setDetecting(false); setStep(1); setConnected(["OpenAI","LangGraph","Custom JSON"]); notify("Stack detected: OpenAI + LangGraph + custom tool traces."); }, 1200); };
-  return <section className="onboard-page"><article className="v2-card onboarding-main"><div className="eyeline">AUTOMATED CUSTOMER ONBOARDING</div><h2>Useful Moda dashboard in under 10 minutes.</h2><div className="onboarding-timeline">{["Detect stack","Map trace schema","Configure signals","First dashboard"].map((x,i)=><div className={i<=step?"done":""} key={x}><span>{i<step?"✓":i+1}</span><b>{x}</b><small>{["Framework + models","Messages + tool calls","Quality + safety","Patterns + next fixes"][i]}</small></div>)}</div><div className="connector-grid">{connectors.map(x=><button key={x} className={connected.includes(x)?"connected":""} onClick={()=>setConnected(current=>current.includes(x)?current.filter(y=>y!==x):[...current,x])}><i>{connected.includes(x)?"✓":"+"}</i><b>{x}</b><span>{connected.includes(x)?"Connected":"Available"}</span></button>)}</div><div className="onboard-actions"><button className="v2-primary" onClick={detect}>{detecting?"Detecting environment…":"Auto-detect stack"}</button><button onClick={()=>{setStep(Math.min(3,step+1));notify(step>=2?"First Moda dashboard created in 08:42.":"Onboarding advanced.")}} disabled={step===0}>Continue setup →</button></div></article>
-    <article className="v2-card detected-stack"><h3>Detected environment</h3><dl><dt>Framework</dt><dd>{step?"LangGraph 0.2":"Waiting…"}</dd><dt>Models</dt><dd>{step?"GPT-4.1 + o3":"Waiting…"}</dd><dt>Tools</dt><dd>{step?"refund, search, escalate":"Waiting…"}</dd><dt>Trace shape</dt><dd>{step?"OpenTelemetry + custom events":"Waiting…"}</dd></dl><div className="time-goal"><span>TIME TO VALUE</span><b>{step===3?"08:42":"< 10:00"}</b><small>{step===3?"Dashboard live":"Target"}</small></div></article></section>;
+  const agents = [
+    { icon:"⌁", name:"Connector Scout", script:"detect_agent_stack.ts", action:"Scanning SDKs, models, and trace sources" },
+    { icon:"≋", name:"Schema Mapper", script:"normalize_traces.py", action:"Mapping messages, tool calls, and outcomes" },
+    { icon:"✦", name:"Signal Builder", script:"configure_signals.ts", action:"Creating failure and quality monitors" },
+    { icon:"▦", name:"Dashboard Agent", script:"publish_workspace.ts", action:"Building the first useful Moda view" }
+  ];
+  const runOnboarding = () => {
+    if(running) return;
+    setRunning(true); setStep(0); setConnected([]);
+    window.setTimeout(()=>setConnected(["OpenAI","LangGraph"]),450);
+    window.setTimeout(()=>{setStep(1);setConnected(["OpenAI","LangGraph","Custom JSON"]);},1050);
+    window.setTimeout(()=>setStep(2),1750);
+    window.setTimeout(()=>{setStep(3);setRunning(false);notify("Onboarding complete: first Moda dashboard live in 08:42.");},2500);
+  };
+  const statusFor = (index:number) => index < step || (!running && step===3) ? "complete" : index===step && running ? "running" : "queued";
+  return <section className="onboard-page onboarding-v3">
+    <section className="onboard-hero">
+      <div><div className="eyeline">AUTOMATED CUSTOMER ONBOARDING</div><h2>From trace export to useful Moda workspace.</h2><p>Four automated steps. One clear outcome. No manual configuration maze.</p></div>
+      <div className="onboard-target"><span>TIME TO FIRST VALUE</span><b>{step===3?"08:42":"< 10 min"}</b><small>{step===3?"✓ Workspace live":"Target for every new customer"}</small></div>
+    </section>
+    <div className="onboard-progress">{phases.map((phase,i)=>{const status=statusFor(i);return <div className={status} key={phase.name}><span>{status==="complete"?"✓":i+1}</span><b>{phase.name}</b><small>{phase.detail}</small>{i<phases.length-1&&<i>→</i>}</div>})}</div>
+    <section className="onboard-workspace">
+      <article className="v2-card connection-panel">
+        <div className="v2-card-head"><div><h3>1. Connect the customer environment</h3><p>Moda detects what is already running.</p></div><span className={running?"scan-live":""}>{running?"● SCANNING":"READY"}</span></div>
+        <div className="connector-grid">{connectors.map(x=><button key={x} className={connected.includes(x)?"connected":""} onClick={()=>setConnected(current=>current.includes(x)?current.filter(y=>y!==x):[...current,x])}><i>{connected.includes(x)?"✓":"+"}</i><span><b>{x}</b><small>{connected.includes(x)?"Connection verified":"Available connector"}</small></span></button>)}</div>
+        <button className="v2-primary run-onboarding" onClick={runOnboarding} disabled={running}>{running?`Running step ${step+1} of 4…`:step===3?"Run onboarding again":"Run complete onboarding →"}</button>
+      </article>
+      <article className="v2-card environment-panel">
+        <div className="v2-card-head"><div><h3>2. Review the detected workspace</h3><p>What Moda configures automatically.</p></div><span className={step===3?"workspace-live":""}>{step===3?"LIVE":"PREVIEW"}</span></div>
+        <div className="environment-map">
+          <div><span>FRAMEWORK</span><b>{step>=0?"LangGraph 0.2":"Waiting for scan"}</b><small>{step>=0?"12 workflows discovered":"—"}</small></div>
+          <div><span>MODELS</span><b>{step>=0?"GPT-4.1 + o3":"Waiting for scan"}</b><small>{step>=0?"2 production models":"—"}</small></div>
+          <div><span>TOOLS</span><b>{step>=1?"refund · search · escalate":"Mapping tool calls"}</b><small>{step>=1?"18 tools normalized":"—"}</small></div>
+          <div><span>TRACE FORMAT</span><b>{step>=1?"OpenTelemetry + custom":"Mapping schema"}</b><small>{step>=1?"48k historical traces":"—"}</small></div>
+        </div>
+        <div className="first-output"><span>FIRST MODA OUTPUT</span><b>{step>=2?"5 recurring failure patterns configured":"Appears after signals are configured"}</b><small>{step===3?"Dashboard ready for the customer team":"Tool calls · retrieval · memory · workflow loops"}</small></div>
+      </article>
+    </section>
+    <section className="automation-dock">
+      <div className="dock-title"><span className={running?"pulse-dot":""}/><div><b>AI automation runtime</b><small>{running?`${agents[step]?.name} is working now` : step===3?"All onboarding agents completed successfully":"Agents start when onboarding runs"}</small></div><em>{running?"RUNNING":step===3?"4/4 COMPLETE":"STANDBY"}</em></div>
+      <div className="agent-rail">{agents.map((agent,i)=>{const status=statusFor(i);return <article className={status} key={agent.name}><i>{agent.icon}</i><div><b>{agent.name}</b><code>{agent.script}</code><small>{status==="running"?agent.action:status==="complete"?"Completed successfully":"Waiting for prior step"}</small></div><span>{status==="running"?<i/>:status==="complete"?"✓":"···"}</span></article>})}</div>
+    </section>
+  </section>;
 }
 
 function SalesEngineer({ selected, setSelected, lifecycle, setLifecycle, notify }: any) {
