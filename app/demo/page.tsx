@@ -40,6 +40,7 @@ export default function DemoPage() {
   const [metrics, setMetrics] = useState([0, 0, 0, 0]);
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 3200); };
   useEffect(() => { const target = [48, 12, 3, 184]; const id = window.setInterval(() => setMetrics(values => values.map((value, i) => value >= target[i] ? value : Math.min(target[i], value + Math.max(1, Math.ceil(target[i] / 22))))), 42); return () => window.clearInterval(id); }, []);
+  useEffect(() => { if (window.location.hash.toLowerCase() === "#crm") setView("CRM"); }, []);
   const prospect = prospects[selected];
   return <main className={`gtm-demo-v2 ${collapsed ? "sidebar-closed" : ""}`}>
     <aside className="v2-sidebar">
